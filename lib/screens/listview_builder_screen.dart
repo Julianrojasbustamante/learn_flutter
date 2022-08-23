@@ -12,8 +12,8 @@ class ListViewBuilderScreen extends StatefulWidget {
 }
 
 class _ListViewBuilderScreenState extends State<ListViewBuilderScreen> {
-  final List<int> imagesIds = [1,2,3,4,5,6,7,8,9,10];
   final ScrollController scrollController = ScrollController();
+  final List<int> imagesIds = [(Random().nextInt(80) + 1), (Random().nextInt(80) + 2), (Random().nextInt(80) + 3), (Random().nextInt(80) + 4), (Random().nextInt(80) + 5)];
   bool isLoading = false;
 
   @override
@@ -32,17 +32,30 @@ class _ListViewBuilderScreenState extends State<ListViewBuilderScreen> {
     await Future.delayed(const Duration(seconds: 3));
     addMoreImages();
     setState((){isLoading = false;});
+    if(scrollController.position.pixels + 100 <= scrollController.position.maxScrollExtent) return;
+    scrollController.animateTo(
+      scrollController.position.pixels + 120,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.fastOutSlowIn
+    );
   }
 
   void addMoreImages() {
-    final newImages = [1,2,3,4,5].map((e) => imagesIds.length + e);
+    final newImages = [1,2,3,4,5].map((e) => Random().nextInt(200) + e);
     imagesIds.addAll(newImages);
     setState((){});
   }
 
+  Future<void> onRefresh() async {
+    await Future.delayed(const Duration(seconds: 2));
+    final lastId = imagesIds.length;
+    imagesIds.clear();
+    imagesIds.add(lastId);
+    addMoreImages();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final rand = Random().nextInt(80);
     final size = MediaQuery.of(context).size;
 
     return Scaffold(
@@ -56,25 +69,30 @@ class _ListViewBuilderScreenState extends State<ListViewBuilderScreen> {
         removeBottom: true,
         child: Stack(
           children: [
-            ListView.builder(
-              physics: const BouncingScrollPhysics(),
-              controller: scrollController,
-              itemCount: imagesIds.length,
-              itemBuilder: (BuildContext context, int index) {
-                return FadeInImage(
-                  width: double.infinity,
-                  height: 300,
-                  fit: BoxFit.cover,
-                  placeholder: const AssetImage('assets/jar-loading.gif'),
-                  image: NetworkImage('https://picsum.photos/id/${imagesIds[index] + rand}/500/300')
-                );
-              }
+            RefreshIndicator(
+              color: AppTheme.primary,
+              onRefresh: onRefresh,
+              child: ListView.builder(
+                physics: const BouncingScrollPhysics(),
+                controller: scrollController,
+                itemCount: imagesIds.length,
+                itemBuilder: (BuildContext context, int index) {
+                  return FadeInImage(
+                    width: double.infinity,
+                    height: 300,
+                    fit: BoxFit.cover,
+                    placeholder: const AssetImage('assets/jar-loading.gif'),
+                    image: NetworkImage('https://picsum.photos/id/${imagesIds[index]}/500/300')
+                  );
+                }
+              ),
             ),
-            Positioned(
-              bottom: 40,
-              left: size.width * 0.5 - 30,
-              child: const _LoadingIcon()
-            ),
+            if(isLoading)
+              Positioned(
+                bottom: 40,
+                left: size.width * 0.5 - 30,
+                child: const _LoadingIcon()
+              ),
           ],
         ),
       ),
@@ -88,14 +106,14 @@ class _LoadingIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.all(10),
+      padding: const EdgeInsets.all(10),
       height: 60,
       width: 60,
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.9),
         shape: BoxShape.circle,
       ),
-      child: CircularProgressIndicator(color: AppTheme.primary,),
+      child: const CircularProgressIndicator(color: AppTheme.primary,),
     );
   }
 }
